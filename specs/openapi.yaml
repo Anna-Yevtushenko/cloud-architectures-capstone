@@ -1,0 +1,129 @@
+
+openapi: 3.0.3
+
+info:
+  title: Key-Value Store API
+  version: 1.0.0
+  description: REST API for a distributed key-value store.
+
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /tables:
+    post:
+      tags: [Tables]
+      summary: Create a table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, partitionKey]
+              properties:
+                name:
+                  type: string
+                  example: users
+                partitionKey:
+                  type: string
+                  example: userId
+      responses:
+        '201':
+          description: Table created
+        '400':
+          description: Invalid table definition
+        '409':
+          description: Table already exists
+
+  /tables/{tableName}/records:
+    post:
+      tags: [Records]
+      summary: Create a record
+      parameters:
+        - name: tableName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, value]
+              properties:
+                key:
+                  type: string
+                  example: user_101
+                value:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    name: Anna
+                    city: Kyiv
+      responses:
+        '201':
+          description: Record created
+        '400':
+          description: Invalid record
+        '404':
+          description: Table not found
+        '409':
+          description: Record already exists
+
+  /tables/{tableName}/records/{key}:
+    parameters:
+      - name: tableName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags: [Records]
+      summary: Read a record
+      responses:
+        '200':
+          description: Record found
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [key, value]
+                properties:
+                  key:
+                    type: string
+                    example: user_101
+                  value:
+                    type: object
+                    additionalProperties: true
+                    example:
+                      name: Anna
+                      city: Kyiv
+        '404':
+          description: Record or table not found
+
+    head:
+      tags: [Records]
+      summary: Check if a record exists
+      responses:
+        '200':
+          description: Record exists
+        '404':
+          description: Record or table not found
+
+    delete:
+      tags: [Records]
+      summary: Delete a record
+      responses:
+        '204':
+          description: Record deleted
+        '404':
+          description: Record or table not found
