@@ -1,9 +1,44 @@
+import os
+import asyncio
+import httpx
+
+from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
-from typing import Any
 
-app = FastAPI(title="Shard Service")
+SHARD_ID = os.getenv("SHARD_ID", "shard-1")
+SHARD_URL = os.getenv("SHARD_URL", "http://127.0.0.1:8001")
+COORDINATOR_URL = os.getenv("COORDINATOR_URL", "http://127.0.0.1:8000")
+
+
+async def register_with_coordinator():
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                response = await client.post(
+                    f"{COORDINATOR_URL}/shards/register",
+                    json={
+                        "shardId": SHARD_ID,
+                        "url": SHARD_URL,
+                    },
+                    timeout=5.0,
+                )
+                response.raise_for_status()
+                print(f"Shard {SHARD_ID} registered successfully")
+                return
+            except (httpx.RequestError, httpx.HTTPStatusError) as error:
+                print(f"Registration failed: {error}. Retrying in 3 seconds...")
+                await asyncio.sleep(3)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await register_with_coordinator()
+    yield
+
+app = FastAPI(title="Shard Service", lifespan=lifespan)
 
 records = {}
 
