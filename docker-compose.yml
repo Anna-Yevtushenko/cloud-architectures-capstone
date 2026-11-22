@@ -1,0 +1,33 @@
+services:
+  coordinator:
+    build:
+      context: .
+      dockerfile: coordinator/Dockerfile
+    ports:
+      - "8000:8000"
+
+  shard-1:
+    build:
+      context: .
+      dockerfile: shard/Dockerfile
+    environment:
+      SHARD_ID: shard-1
+      SHARD_URL: http://shard-1:8001
+      COORDINATOR_URL: http://coordinator:8000
+    ports:
+      - "8001:8001"
+    depends_on:
+      - coordinator
+
+  shard-2:
+    build:
+      context: .
+      dockerfile: shard/Dockerfile
+    environment:
+      SHARD_ID: shard-2
+      SHARD_URL: http://shard-2:8001
+      COORDINATOR_URL: http://coordinator:8000
+    ports:
+      - "8002:8001"
+    depends_on:
+      - coordinator
