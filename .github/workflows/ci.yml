@@ -21,9 +21,26 @@ jobs:
       - name: Start services
         run: docker compose up -d --wait
 
-      - name: Verify shard registration
+      - name: Wait for shard registration
         run: |
-          curl --fail http://localhost:8000/shards
+          set -e
+
+          for i in $(seq 1 30); do
+            RESPONSE=$(curl -fsS http://localhost:8000/shards || true)
+
+            if echo "$RESPONSE" | grep -q '"shard-1"' && \
+               echo "$RESPONSE" | grep -q '"shard-2"'; then
+              echo "Both shards registered successfully"
+              exit 0
+            fi
+
+            echo "Waiting for shards... attempt $i/30"
+            sleep 2
+          done
+
+          echo "Shard registration timeout"
+          docker compose logs
+          exit 1
 
       - name: Test CRUD
         run: |
@@ -38,6 +55,10 @@ jobs:
             -d '{"key":"product_101","value":{"name":"Laptop"}}'
 
           curl --fail http://localhost:8000/tables/products/records/product_101
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
 
       - name: Stop services
         if: always()
